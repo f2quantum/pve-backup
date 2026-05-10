@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import fcntl
 import json
 import logging
@@ -89,7 +90,20 @@ def run(config, dry_run: bool = False) -> int:
         if dry_run:
             print("vzdump command:", " ".join(build_vzdump_command(config.backup)))
 
-        artifacts = run_vzdump(config.backup, dry_run=dry_run)
+        try:
+            artifacts = run_vzdump(config.backup, dry_run=dry_run)
+        except Exception as exc:
+            if not dry_run:
+                write_state(
+                    config.runtime.state_file,
+                    {
+                        "status": "failed",
+                        "failed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+                        "error": str(exc),
+                        "vzdump_command": build_vzdump_command(config.backup),
+                    },
+                )
+            raise SystemExit(1) from exc
         if dry_run:
             return 0
 
@@ -119,7 +133,10 @@ def run(config, dry_run: bool = False) -> int:
 
         prune_remote(uploader, config.tos.remote_keep_last_per_guest, dry_run=dry_run)
         if config.retention.delete_local_after_upload:
-            delete_uploaded_files(uploaded_paths, dry_run=dry_run)
+            delete_uploaded_files(
+                uploaded_paths + [artifact.path for artifact in artifacts],
+                dry_run=dry_run,
+            )
         else:
             prune_local(
                 config.backup.dumpdir,
@@ -162,8 +179,8 @@ def configure(args) -> None:
     backup["mode"] = "snapshot"
 
     retention = raw.setdefault("retention", {})
-    if args.local_keep is not None:
-        retention["local_keep_last_per_guest"] = args.local_keep
+    retention["delete_local_after_upload"] = True
+    retention["local_keep_last_per_guest"] = 0
 
     tos = raw.setdefault("tos", {})
     if args.remote_keep is not None:

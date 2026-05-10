@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -57,11 +58,20 @@ def run_vzdump(config: BackupConfig, dry_run: bool = False) -> list[BackupArtifa
         return []
 
     config.dumpdir.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        cmd,
-        check=True,
-        timeout=config.timeout_seconds or None,
-    )
+    try:
+        subprocess.run(
+            cmd,
+            check=True,
+            timeout=config.timeout_seconds or None,
+        )
+    except subprocess.CalledProcessError as exc:
+        print(
+            f"vzdump 执行失败，退出码: {exc.returncode}。"
+            "请查看上方 vzdump 输出中的 ERROR 行，或运行: "
+            "journalctl -u pve-backup.service -n 200 --no-pager",
+            file=sys.stderr,
+        )
+        raise
     return find_new_artifacts(config.dumpdir, start_time)
 
 

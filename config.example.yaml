@@ -34,8 +34,8 @@ archive:
 # tos://bytehouse-engine-qa-test/backup/{hostname}/
 
 retention:
-  local_keep_last_per_guest: 2
-  delete_local_after_upload: false
+  local_keep_last_per_guest: 0
+  delete_local_after_upload: true
 
 runtime:
   lock_file: /var/lock/pve-backup.lock

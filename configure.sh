@@ -20,7 +20,6 @@ usage() {
   --frequency VALUE        非交互配置：hourly、daily、weekly、monthly
   --time HH:MM             非交互配置：执行时间。默认: 03:20
   --on-calendar VALUE      非交互配置：systemd OnCalendar 表达式
-  --local-keep N           非交互配置：本地保留数量
   --remote-keep N          非交互配置：远端保留数量
   --run-now                非交互配置后立即手动备份一次
   -h, --help               显示帮助
@@ -48,7 +47,7 @@ while [[ $# -gt 0 ]]; do
       usage
       exit 0
       ;;
-    --vmids|--exclude|--frequency|--time|--on-calendar|--local-keep|--remote-keep)
+    --vmids|--exclude|--frequency|--time|--on-calendar|--remote-keep)
       ARGS+=("$1" "$2")
       NON_INTERACTIVE=1
       shift 2
@@ -216,10 +215,6 @@ configure_auto_backup() {
       config_args+=("--time" "$run_time")
     fi
   fi
-
-  read -r -p "每个 guest 本地保留多少组备份 [2]: " local_keep
-  local_keep="${local_keep:-2}"
-  config_args+=("--local-keep" "$local_keep")
 
   read -r -p "每个 guest 在 TOS 远端保留多少组备份 [7]: " remote_keep
   remote_keep="${remote_keep:-7}"

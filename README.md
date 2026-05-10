@@ -278,9 +278,11 @@ journalctl -u pve-backup.service -n 200 --no-pager
 
 ```yaml
 retention:
-  local_keep_last_per_guest: 2
-  delete_local_after_upload: false
+  local_keep_last_per_guest: 0
+  delete_local_after_upload: true
 ```
+
+默认行为是上传到 TOS 成功后删除本地文件，包括加密归档和本次 `vzdump` 生成的原始备份文件，避免 `/var/lib/vz/dump` 被长期占满。
 
 远端 TOS 保留：
 
