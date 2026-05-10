@@ -1,0 +1,13 @@
+[Unit]
+Description=Run Proxmox VE backups and upload to object storage
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/pve-backup
+EnvironmentFile=-/root/pve-backup/.env
+ExecStart=/root/pve-backup/start.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

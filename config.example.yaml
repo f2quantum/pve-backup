@@ -1,0 +1,44 @@
+backup:
+  # Prefer explicit VM/CT ids. Set all: true to back up every guest on this node.
+  vmids: [101, 102]
+  all: false
+  exclude: []
+  dumpdir: /var/lib/vz/dump
+  mode: snapshot
+  # Use 0 when archive.format=tar_zst_enc to avoid double compression.
+  compress: "0"
+  bwlimit: 0
+  ionice: 7
+  timeout_seconds: 0
+  extra_args: []
+
+tos:
+  endpoint: tos-cn-beijing.volces.com
+  region: cn-beijing
+  bucket: bytehouse-engine-qa-test
+  prefix: backup/{hostname}
+  access_key_id_env: TOS_ACCESS_KEY
+  secret_access_key_env: TOS_SECRET_KEY
+  upload_logs: true
+  storage_class:
+  remote_keep_last_per_guest: 7
+
+archive:
+  enabled: true
+  format: tar_zst_enc
+  output_dir:
+  password_env: PVE_BACKUP_ARCHIVE_PASSWORD
+  compression_level: 19
+
+# TOS destination represented by the config above:
+# tos://bytehouse-engine-qa-test/backup/{hostname}/
+
+retention:
+  local_keep_last_per_guest: 2
+  delete_local_after_upload: false
+
+runtime:
+  lock_file: /var/lock/pve-backup.lock
+  state_file: /var/lib/pve-backup/state.json
+  log_level: INFO
+  require_snapshot_mode: true
