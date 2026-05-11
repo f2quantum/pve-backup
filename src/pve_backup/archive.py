@@ -45,7 +45,12 @@ def create_encrypted_archive(
     output_dir = archive_config.output_dir or backup_config.dumpdir
     timestamp = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
     guest_label = _guest_label(artifacts)
-    suffix = ".zip" if archive_config.format == "zip" else ".tar.zst.enc"
+    if archive_config.format == "zip":
+        suffix = ".zip"
+    elif archive_config.format == "tar_enc":
+        suffix = ".tar.enc"
+    else:
+        suffix = ".tar.zst.enc"
     archive_path = output_dir / f"pve-backup-{socket.gethostname()}-{guest_label}-{timestamp}{suffix}"
 
     if dry_run:
@@ -60,6 +65,8 @@ def create_encrypted_archive(
     LOGGER.info("creating encrypted archive %s", archive_path)
     if archive_config.format == "tar_zst_enc":
         _create_tar_zst_enc(files, archive_path, password, archive_config.compression_level)
+    elif archive_config.format == "tar_enc":
+        _create_tar_enc(files, archive_path, password)
     else:
         _create_zip(files, archive_path, password, archive_config.compression_level)
 
@@ -104,6 +111,28 @@ def _create_tar_zst_enc(
                     tar.add(path, arcname=path.name)
         finally:
             compressor.close()
+        raw.write(mac.finalize())
+
+
+def _create_tar_enc(files: list[Path], archive_path: Path, password: str) -> None:
+    salt = os.urandom(16)
+    nonce = os.urandom(16)
+    key_material = _derive_key(password.encode("utf-8"), salt)
+    enc_key = key_material[:32]
+    mac_key = key_material[32:]
+
+    with archive_path.open("wb") as raw:
+        header = MAGIC + salt + nonce + struct.pack(">I", PBKDF2_ITERATIONS)
+        raw.write(header)
+        mac = hmac.HMAC(mac_key, hashes.SHA256())
+        mac.update(header)
+        encrypted = _EncryptingWriter(raw, enc_key, nonce, mac)
+        try:
+            with tarfile.open(fileobj=encrypted, mode="w|") as tar:
+                for path in files:
+                    tar.add(path, arcname=path.name)
+        finally:
+            encrypted.close()
         raw.write(mac.finalize())
 
 

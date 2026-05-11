@@ -29,4 +29,4 @@ fi
 cd "$PROJECT_DIR"
 export UV_CACHE_DIR="${UV_CACHE_DIR:-$PROJECT_DIR/.uv-cache}"
 export UV_PYTHON_INSTALL_DIR="${UV_PYTHON_INSTALL_DIR:-$PROJECT_DIR/.uv-python}"
-"$UV_BIN" run pve-backup --config "$CONFIG_PATH" run
+"$UV_BIN" run pve-backup --config "$CONFIG_PATH" run "$@"

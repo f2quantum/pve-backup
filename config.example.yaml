@@ -5,8 +5,8 @@ backup:
   exclude: []
   dumpdir: /var/lib/vz/dump
   mode: snapshot
-  # Use 0 when archive.format=tar_zst_enc to avoid double compression.
-  compress: "0"
+  # Keep zstd here and use archive.format=tar_enc to avoid recompressing backup files.
+  compress: zstd
   bwlimit: 0
   ionice: 7
   timeout_seconds: 0
@@ -25,10 +25,10 @@ tos:
 
 archive:
   enabled: true
-  format: tar_zst_enc
+  format: tar_enc
   output_dir:
   password_env: PVE_BACKUP_ARCHIVE_PASSWORD
-  compression_level: 19
+  compression_level: 0
 
 # TOS destination represented by the config above:
 # tos://bytehouse-engine-qa-test/backup/{hostname}/

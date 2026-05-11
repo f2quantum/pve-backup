@@ -227,18 +227,19 @@ uv run pve-backup --config /etc/pve-backup.yaml status
 ```yaml
 archive:
   enabled: true
+  format: tar_enc
   output_dir:
   password_env: PVE_BACKUP_ARCHIVE_PASSWORD
-  compression_level: 6
+  compression_level: 0
 ```
 
 运行流程：
 
 ```text
-vzdump snapshot backup -> encrypted zip -> upload zip to TOS
+vzdump snapshot backup -> encrypted tar -> upload archive to TOS
 ```
 
-上传到 TOS 的对象是单个 `.zip` 文件，里面包含本次 `vzdump` 生成的备份归档和日志。ZIP 使用 `.env` 中 `PVE_BACKUP_ARCHIVE_PASSWORD` 指定的密码加密。
+上传到 TOS 的对象默认是单个 `.tar.enc` 文件，里面包含本次 `vzdump` 生成的备份归档和日志。`vzdump` 自身使用 zstd 压缩，归档层只负责打包和加密，避免对 `.vma.zst` 做二次压缩。加密密码使用 `.env` 中的 `PVE_BACKUP_ARCHIVE_PASSWORD`。
 
 远程 TOS 对象名会使用固定偏移量 Caesar 编码处理，但日期数字不编码，方便看出是哪天生成的。例如本地文件名保持可读，上传后的对象名会变成编码后的字符串；映射关系会写入 `/var/lib/pve-backup/state.json` 的 `remote_name_map`。
 

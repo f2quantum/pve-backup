@@ -120,8 +120,8 @@ def validate_config(config: AppConfig) -> None:
         raise ValueError("tos.bucket is required")
     if config.archive.enabled and not config.archive.password:
         raise ValueError(f"archive password is required in {config.archive.password_env}")
-    if config.archive.format not in {"tar_zst_enc", "zip"}:
-        raise ValueError("archive.format must be one of: tar_zst_enc, zip")
+    if config.archive.format not in {"tar_zst_enc", "tar_enc", "zip"}:
+        raise ValueError("archive.format must be one of: tar_zst_enc, tar_enc, zip")
     if not 0 <= config.archive.compression_level <= 9:
         if config.archive.format == "zip":
             raise ValueError("archive.compression_level must be between 0 and 9 for zip")
