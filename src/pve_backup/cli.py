@@ -18,7 +18,7 @@ from .archive import create_encrypted_archive
 from .config import load_config
 from .naming import caesar_encrypt_filename
 from .retention import delete_uploaded_files, prune_local, prune_remote
-from .runner import build_vzdump_command, run_vzdump
+from .runner import BackupArtifact, build_vzdump_command, run_vzdump
 from .state import read_state, write_state
 
 
@@ -53,6 +53,11 @@ def main(argv: list[str] | None = None) -> int:
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("--dry-run", action="store_true")
 
+    upload_parser = subparsers.add_parser("upload-file")
+    upload_parser.add_argument("path", type=Path)
+    upload_parser.add_argument("--source", action="append", type=Path, default=[])
+    upload_parser.add_argument("--dry-run", action="store_true")
+
     args = parser.parse_args(argv)
     load_dotenv(Path(".env"))
 
@@ -83,6 +88,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "run":
         return run(config, dry_run=args.dry_run)
+    if args.command == "upload-file":
+        return upload_file(config, args.path, args.source, dry_run=args.dry_run)
     return 2
 
 
@@ -157,6 +164,36 @@ def run(config, dry_run: bool = False) -> int:
                 "source_artifacts": [str(artifact.path) for artifact in artifacts],
                 "vmids": sorted({artifact.vmid for artifact in artifacts if artifact.vmid}),
                 "archive_enabled": config.archive.enabled,
+            },
+        )
+    return 0
+
+
+def upload_file(config, path: Path, sources: list[Path], dry_run: bool = False) -> int:
+    from .uploader import TosUploader
+
+    if not path.is_file() and not dry_run:
+        raise SystemExit(f"file not found: {path}")
+
+    with single_instance(config.runtime.lock_file):
+        uploader = TosUploader(config.tos)
+        artifact = BackupArtifact(path=path, kind="archive", vmid=0)
+        uploaded_key = uploader.upload_artifact(artifact, dry_run=dry_run)
+        prune_remote(uploader, config.tos.remote_keep_last_per_guest, dry_run=dry_run)
+        if config.retention.delete_local_after_upload:
+            delete_uploaded_files([path, *sources], dry_run=dry_run)
+        write_state(
+            config.runtime.state_file,
+            {
+                "status": "success",
+                "uploaded_keys": [uploaded_key],
+                "uploaded_paths": [str(path)],
+                "remote_name_map": {
+                    path.name: caesar_encrypt_filename(path.name),
+                },
+                "source_artifacts": [str(source) for source in sources],
+                "vmids": [],
+                "archive_enabled": True,
             },
         )
     return 0

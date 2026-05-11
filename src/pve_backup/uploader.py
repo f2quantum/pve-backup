@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import socket
 from pathlib import Path
 
@@ -11,6 +12,9 @@ from .naming import caesar_encrypt_filename
 from .runner import BackupArtifact
 
 LOGGER = logging.getLogger(__name__)
+SINGLE_PUT_LIMIT = 5 * 1024 * 1024 * 1024
+MULTIPART_PART_SIZE = 128 * 1024 * 1024
+MULTIPART_TASK_NUM = 4
 
 
 class TosUploader:
@@ -38,13 +42,29 @@ class TosUploader:
         if self.config.storage_class:
             kwargs["storage_class"] = _storage_class(self.config.storage_class)
 
+        size = artifact.path.stat().st_size
         LOGGER.info("uploading %s to tos://%s/%s", artifact.path, self.config.bucket, key)
-        self.client.put_object_from_file(
-            self.config.bucket,
-            key,
-            str(artifact.path),
-            **kwargs,
-        )
+        if size >= SINGLE_PUT_LIMIT:
+            checkpoint = f"{artifact.path}.tos-checkpoint"
+            self.client.upload_file(
+                self.config.bucket,
+                key,
+                str(artifact.path),
+                part_size=MULTIPART_PART_SIZE,
+                task_num=MULTIPART_TASK_NUM,
+                enable_checkpoint=True,
+                checkpoint_file=checkpoint,
+                **kwargs,
+            )
+            if os.path.exists(checkpoint):
+                os.remove(checkpoint)
+        else:
+            self.client.put_object_from_file(
+                self.config.bucket,
+                key,
+                str(artifact.path),
+                **kwargs,
+            )
         return key
 
     def object_key(self, path: Path) -> str:
