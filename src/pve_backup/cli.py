@@ -37,6 +37,7 @@ def main(argv: list[str] | None = None) -> int:
     configure_parser.add_argument("--vmids", help="comma-separated VM/CT ids, for example: 101,102")
     configure_parser.add_argument("--all", action="store_true", help="back up all guests")
     configure_parser.add_argument("--exclude", help="comma-separated guest ids to exclude with --all")
+    configure_parser.add_argument("--dumpdir", type=Path, help="directory for temporary vzdump output")
     configure_parser.add_argument("--on-calendar", help="raw systemd OnCalendar expression")
     configure_parser.add_argument("--frequency", choices=["hourly", "daily", "weekly", "monthly"])
     configure_parser.add_argument("--time", default="03:20", help="HH:MM for daily/weekly/monthly")
@@ -176,6 +177,8 @@ def configure(args) -> None:
         backup["vmids"] = parse_ids(args.vmids)
     if args.exclude:
         backup["exclude"] = parse_ids(args.exclude)
+    if args.dumpdir:
+        backup["dumpdir"] = str(args.dumpdir)
     backup["mode"] = "snapshot"
 
     retention = raw.setdefault("retention", {})

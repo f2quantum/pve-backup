@@ -93,7 +93,8 @@ bash configure.sh
 0) 退出
 ```
 
-选择“配置自动备份”时，会先展示当前 PVE VM/CT，再让你选择要备份的虚拟机、备份频率、本地/远端保留数量。
+选择“配置自动备份”时，会先展示当前 PVE VM/CT，再让你选择要备份的虚拟机、备份频率、vzdump 临时备份目录和远端保留数量。
+临时备份目录可以是 `/var/lib/vz/dump`，也可以是单独挂载的 `/mnt/pve-backup`。上传到 TOS 成功后，本地备份文件会自动删除。
 
 非交互式配置也支持：
 
@@ -164,9 +165,9 @@ uv run pve-backup --config /etc/pve-backup.yaml list-guests
 ```bash
 uv run pve-backup --config /etc/pve-backup.yaml configure \
   --vmids 101,102 \
+  --dumpdir /mnt/pve-backup \
   --frequency daily \
   --time 03:30 \
-  --local-keep 2 \
   --remote-keep 7 \
   --timer /etc/systemd/system/pve-backup.timer
 ```

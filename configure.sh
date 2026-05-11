@@ -17,6 +17,7 @@ usage() {
   --vmids IDS              非交互配置：要备份的 VM/CT ID，例如: 101,102
   --all                    非交互配置：备份所有 VM/CT
   --exclude IDS            非交互配置：使用 --all 时排除的 ID
+  --dumpdir PATH           非交互配置：vzdump 临时备份目录
   --frequency VALUE        非交互配置：hourly、daily、weekly、monthly
   --time HH:MM             非交互配置：执行时间。默认: 03:20
   --on-calendar VALUE      非交互配置：systemd OnCalendar 表达式
@@ -47,7 +48,7 @@ while [[ $# -gt 0 ]]; do
       usage
       exit 0
       ;;
-    --vmids|--exclude|--frequency|--time|--on-calendar|--remote-keep)
+    --vmids|--exclude|--dumpdir|--frequency|--time|--on-calendar|--remote-keep)
       ARGS+=("$1" "$2")
       NON_INTERACTIVE=1
       shift 2
@@ -150,6 +151,12 @@ run_backup_now() {
     manual_args+=("--vmids" "$vmids")
   fi
 
+  current_dumpdir="$(grep -E '^[[:space:]]*dumpdir:' "$CONFIG_PATH" | head -n 1 | awk '{print $2}')"
+  current_dumpdir="${current_dumpdir:-/var/lib/vz/dump}"
+  read -r -p "请输入本次备份临时目录 [$current_dumpdir]: " manual_dumpdir
+  manual_dumpdir="${manual_dumpdir:-$current_dumpdir}"
+  manual_args+=("--dumpdir" "$manual_dumpdir")
+
   "$UV_BIN" run pve-backup --config "$manual_config" configure \
     "${manual_args[@]}"
   "$UV_BIN" run pve-backup --config "$manual_config" validate
@@ -215,6 +222,15 @@ configure_auto_backup() {
       config_args+=("--time" "$run_time")
     fi
   fi
+
+  current_dumpdir="$(grep -E '^[[:space:]]*dumpdir:' "$CONFIG_PATH" | head -n 1 | awk '{print $2}')"
+  current_dumpdir="${current_dumpdir:-/var/lib/vz/dump}"
+  echo
+  echo "请选择 vzdump 临时备份目录。"
+  echo "上传 TOS 成功后，本地备份文件会自动删除。"
+  read -r -p "备份临时目录 [$current_dumpdir]: " dumpdir
+  dumpdir="${dumpdir:-$current_dumpdir}"
+  config_args+=("--dumpdir" "$dumpdir")
 
   read -r -p "每个 guest 在 TOS 远端保留多少组备份 [7]: " remote_keep
   remote_keep="${remote_keep:-7}"
