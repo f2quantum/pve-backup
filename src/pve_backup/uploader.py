@@ -14,7 +14,7 @@ from .runner import BackupArtifact
 LOGGER = logging.getLogger(__name__)
 SINGLE_PUT_LIMIT = 5 * 1024 * 1024 * 1024
 MULTIPART_PART_SIZE = 128 * 1024 * 1024
-MULTIPART_TASK_NUM = 4
+MULTIPART_TASK_NUM = 16
 
 
 class TosUploader:
